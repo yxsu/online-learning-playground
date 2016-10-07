@@ -14,8 +14,9 @@ limitations under the License.
 ==============================================================================*/
 /// <reference path="typings/d3/d3.d.ts" />
 /// <reference path="typings/seedrandom/seedrandom.d.ts" />
-import * as d3 from "d3"
+import * as d3 from "d3";
 import * as nn from "./nn";
+import * as perceptron from "./perceptron";
 import {HeatMap, reduceMatrix} from "./heatmap";
 import {
   State,
@@ -31,6 +32,7 @@ import {Example2D, shuffle} from "./dataset";
 import {AppendingLineChart} from "./linechart";
 
 let mainWidth;
+let index_data: number[] = [];
 
 // More scrolling
 d3.select(".more button").on("click", function() {
@@ -148,8 +150,7 @@ state.getHiddenProps().forEach(prop => {
   }
 });
 
-let boundary: {[id: string]: number[][]} = {};
-let selectedNodeId: string = null;
+let boundary: number[][];
 // Plot the heatmap.
 let xDomain: [number, number] = [-6, 6];
 let heatMap =
@@ -439,62 +440,6 @@ function drawNode(cx: number, cy: number, nodeId: string, isInput: boolean,
     }
     nodeGroup.classed(activeOrNotClass, true);
   }
-  if (!isInput) {
-    // Draw the node's bias.
-    nodeGroup.append("rect")
-      .attr({
-        id: `bias-${nodeId}`,
-        x: -BIAS_SIZE - 2,
-        y: RECT_SIZE - BIAS_SIZE + 3,
-        width: BIAS_SIZE,
-        height: BIAS_SIZE,
-      }).on("mouseenter", function() {
-        updateHoverCard(HoverType.BIAS, node, d3.mouse(container.node()));
-      }).on("mouseleave", function() {
-        updateHoverCard(null);
-      });
-  }
-
-  // Draw the node's canvas.
-  let div = d3.select("#network").insert("div", ":first-child")
-    .attr({
-      "id": `canvas-${nodeId}`,
-      "class": "canvas"
-    })
-    .style({
-      position: "absolute",
-      left: `${x + 3}px`,
-      top: `${y + 3}px`
-    })
-    .on("mouseenter", function() {
-      selectedNodeId = nodeId;
-      div.classed("hovered", true);
-      nodeGroup.classed("hovered", true);
-      updateDecisionBoundary(network, false);
-      heatMap.updateBackground(boundary[nodeId], state.discretize);
-    })
-    .on("mouseleave", function() {
-      selectedNodeId = null;
-      div.classed("hovered", false);
-      nodeGroup.classed("hovered", false);
-      updateDecisionBoundary(network, false);
-      heatMap.updateBackground(boundary[nn.getOutputNode(network).id],
-          state.discretize);
-    });
-  if (isInput) {
-    div.on("click", function() {
-      state[nodeId] = !state[nodeId];
-      reset();
-    });
-    div.style("cursor", "pointer");
-  }
-  if (isInput) {
-    div.classed(activeOrNotClass, true);
-  }
-  let nodeHeatMap = new HeatMap(RECT_SIZE, DENSITY / 10, xDomain,
-      xDomain, div, {noSvg: true});
-  div.datum({heatmap: nodeHeatMap, id: nodeId});
-
 }
 
 // Draw network
@@ -750,16 +695,9 @@ function drawLink(
  * It returns a map where each key is the node ID and the value is a square
  * matrix of the outputs of the network for each input in the grid respectively.
  */
-function updateDecisionBoundary(network: nn.Node[][], firstTime: boolean) {
+function updateDecisionBoundary(firstTime: boolean) {
   if (firstTime) {
-    boundary = {};
-    nn.forEachNode(network, true, node => {
-      boundary[node.id] = new Array(DENSITY);
-    });
-    // Go through all predefined inputs.
-    for (let nodeId in INPUTS) {
-      boundary[nodeId] = new Array(DENSITY);
-    }
+    boundary = new Array(DENSITY);
   }
   let xScale = d3.scale.linear().domain([0, DENSITY - 1]).range(xDomain);
   let yScale = d3.scale.linear().domain([DENSITY - 1, 0]).range(xDomain);
@@ -767,29 +705,13 @@ function updateDecisionBoundary(network: nn.Node[][], firstTime: boolean) {
   let i = 0, j = 0;
   for (i = 0; i < DENSITY; i++) {
     if (firstTime) {
-      nn.forEachNode(network, true, node => {
-        boundary[node.id][i] = new Array(DENSITY);
-      });
-      // Go through all predefined inputs.
-      for (let nodeId in INPUTS) {
-        boundary[nodeId][i] = new Array(DENSITY);
-      }
+      boundary[i] = new Array(DENSITY);
     }
     for (j = 0; j < DENSITY; j++) {
       // 1 for points inside the circle, and 0 for points outside the circle.
       let x = xScale(i);
       let y = yScale(j);
-      let input = constructInput(x, y);
-      nn.forwardProp(network, input);
-      nn.forEachNode(network, true, node => {
-        boundary[node.id][i][j] = node.output;
-      });
-      if (firstTime) {
-        // Go through all predefined inputs.
-        for (let nodeId in INPUTS) {
-          boundary[nodeId][i][j] = INPUTS[nodeId].f(x, y);
-        }
-      }
+      boundary[i][j] = perceptron.predict(x, y);
     }
   }
 }
@@ -807,21 +729,19 @@ function getLoss(network: nn.Node[][], dataPoints: Example2D[]): number {
 
 function updateUI(firstStep = false) {
   // Update the links visually.
-  updateWeightsUI(network, d3.select("g.core"));
+  //updateWeightsUI(network, d3.select("g.core"));
   // Update the bias values visually.
-  updateBiasesUI(network);
+  //updateBiasesUI(network);
   // Get the decision boundary of the network.
-  updateDecisionBoundary(network, firstStep);
-  let selectedId = selectedNodeId != null ?
-      selectedNodeId : nn.getOutputNode(network).id;
-  heatMap.updateBackground(boundary[selectedId], state.discretize);
+  updateDecisionBoundary(firstStep);
+  heatMap.updateBackground(boundary, state.discretize);
 
   // Update all decision boundaries.
-  d3.select("#network").selectAll("div.canvas")
-      .each(function(data: {heatmap: HeatMap, id: string}) {
-    data.heatmap.updateBackground(reduceMatrix(boundary[data.id], 10),
-        state.discretize);
-  });
+  //d3.select("#network").selectAll("div.canvas")
+  //    .each(function(data: {heatmap: HeatMap, id: string}) {
+  //  data.heatmap.updateBackground(reduceMatrix(boundary[data.id], 10),
+  //      state.discretize);
+  //});
 
   function zeroPad(n: number): string {
     let pad = "000000";
@@ -865,17 +785,27 @@ function constructInput(x: number, y: number): number[] {
 
 function oneStep(): void {
   iter++;
-  trainData.forEach((point, i) => {
-    let input = constructInput(point.x, point.y);
-    nn.forwardProp(network, input);
-    nn.backProp(network, point.label, nn.Errors.SQUARE);
-    if ((i + 1) % state.batchSize === 0) {
-      nn.updateWeights(network, state.learningRate, state.regularizationRate);
+  if(index_data.length !== state.batchSize) {
+    index_data = new Array(state.batchSize);
+    for(let i = 0; i < index_data.length; i++) {
+      index_data[i] = Math.floor(Math.random() * (trainData.length -1)); 
     }
-  });
+  }
+
+  let batch_data: Example2D[] = new Array(index_data.length);
+  for(let i = 0; i < index_data.length; i++) {
+    batch_data[i] = trainData[index_data[i]];
+    perceptron.adjust(batch_data[i]);
+  }
+
   // Compute the loss.
-  lossTrain = getLoss(network, trainData);
-  lossTest = getLoss(network, testData);
+  lossTrain = perceptron.getLoss(trainData);
+  lossTest = perceptron.getLoss(testData);
+  heatMap.updateTestPoints(batch_data);
+  
+  for(let i = 0; i < index_data.length; i++) {
+      index_data[i] = Math.floor(Math.random() * (trainData.length -1)); 
+  }
   updateUI();
 }
 
@@ -905,15 +835,6 @@ function reset() {
 
   // Make a simple network.
   iter = 0;
-  let numInputs = constructInput(0 , 0).length;
-  let shape = [numInputs].concat(state.networkShape).concat([1]);
-  let outputActivation = (state.problem == Problem.REGRESSION) ?
-      nn.Activations.LINEAR : nn.Activations.TANH;
-  network = nn.buildNetwork(shape, state.activation, outputActivation,
-      state.regularization, constructInputIds(), state.initZero);
-  lossTrain = getLoss(network, trainData);
-  lossTest = getLoss(network, testData);
-  drawNetwork(network);
   updateUI(true);
 };
 
