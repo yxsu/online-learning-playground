@@ -16,7 +16,7 @@
   "author": "Yuxin Su",
   "license": "CC0-1.0",
   "devDependencies": {
-    "electron": "^1.4.1"
+    "electron-prebuilt": "1.4.1"
   },
   "dependencies": {
     "catw": "^1.0.1",
