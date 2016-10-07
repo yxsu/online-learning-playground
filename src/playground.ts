@@ -14,7 +14,7 @@ limitations under the License.
 ==============================================================================*/
 /// <reference path="typings/d3/d3.d.ts" />
 /// <reference path="typings/seedrandom/seedrandom.d.ts" />
-
+import * as d3 from "d3"
 import * as nn from "./nn";
 import {HeatMap, reduceMatrix} from "./heatmap";
 import {
@@ -609,11 +609,7 @@ function drawNetwork(network: nn.Node[][]): void {
   svg.attr("height", maxY);
 
   // Adjust the height of the features column.
-  let height = Math.max(
-    getRelativeHeight(calloutThumb),
-    getRelativeHeight(calloutWeights),
-    getRelativeHeight(d3.select("#network"))
-  );
+  let height = getRelativeHeight(d3.select("#network"))
   d3.select(".column.features").style("height", height + "px");
 }
 
@@ -883,7 +879,7 @@ function oneStep(): void {
   updateUI();
 }
 
-export function getOutputWeights(network: nn.Node[][]): number[] {
+function getOutputWeights(network: nn.Node[][]): number[] {
   let weights: number[] = [];
   for (let layerIdx = 0; layerIdx < network.length - 1; layerIdx++) {
     let currentLayer = network[layerIdx];
@@ -1027,7 +1023,7 @@ function generateData(firstTime = false) {
     state.seed = Math.random().toFixed(5);
     state.serialize();
   }
-  Math.seedrandom(state.seed);
+  //seedrandom(state.seed);
   let numSamples = (state.problem == Problem.REGRESSION) ?
       NUM_SAMPLES_REGRESS : NUM_SAMPLES_CLASSIFY;
   let generator = state.problem == Problem.CLASSIFICATION ?

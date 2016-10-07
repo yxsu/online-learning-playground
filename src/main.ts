@@ -15,10 +15,11 @@ function createMainWindow() {
         width: screen_size.width,
         height: screen_size.height
     });
-    main_window.loadURL('file://' + __dirname + '/../src/index.html');
+    main_window.loadURL('file://' + __dirname + '/index.html');
     main_window.on('closed', function () {
         main_window = null;
-    })
+    });
+    main_window.webContents.openDevTools();
 }
 
 app.on('ready', function() {

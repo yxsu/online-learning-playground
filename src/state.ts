@@ -12,7 +12,8 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 ==============================================================================*/
-
+/// <reference path="typings/seedrandom/seedrandom.d.ts" />
+import * as seedrandom from "seedrandom"
 import * as nn from "./nn";
 import * as dataset from "./dataset";
 
@@ -234,7 +235,7 @@ export class State {
     if (state.seed == null) {
       state.seed = Math.random().toFixed(5);
     }
-    Math.seedrandom(state.seed);
+    seedrandom(state.seed);
     return state;
   }
 

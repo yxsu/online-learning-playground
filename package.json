@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "catw": "^1.0.1",
-    "d3": "^4.2.6",
+    "d3": "^3.5.16",
     "electron-log": "^1.1.1",
     "material-design-lite": "^1.2.1",
     "seedrandom": "^2.4.2"
